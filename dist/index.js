@@ -1,9 +1,14 @@
+const config = {
+    sheetName: 'シート1',
+    backupSheetName: 'タスクバックアップ',
+    googleTaskListId: null, // ★設定してください
+};
 // いい感じに同期します
 // 新規タスクの追加
 // 変更点の更新
 // GoogleTasksの読み込み
 function update() {
-    new MainService().update();
+    new MainService(config).update();
 }
 function onOpen() {
     const customMenu = SpreadsheetApp.getUi();
@@ -13,10 +18,7 @@ function onOpen() {
 }
 // スプレッドシートをセットアップします。
 function setupSheet() {
-    createTaskSheetRepository_().setupSheet();
-}
-function createTaskSheetRepository_() {
-    return new TaskSheetRepository(new Sheet("シート1"), new Sheet("タスクバックアップ"));
+    new MainService(config).setupSheet();
 }
 class Sheet {
     constructor(sheetName) {
@@ -53,9 +55,10 @@ class Sheet {
     }
 }
 class MainService {
-    constructor() {
-        this.googleTasksRepository = new GoogleTasksRepository();
-        this.taskSheetRepository = createTaskSheetRepository_();
+    constructor(config) {
+        // DI
+        this.googleTasksRepository = new GoogleTasksRepository(config.sheetName);
+        this.taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
     }
     static dateToText(dateOrText) {
         if (!dateOrText) {
@@ -88,7 +91,7 @@ class MainService {
             this.googleTasksRepository.insert(v.data);
         });
         updateTaskItems.forEach(v => {
-            // this.googleTasksRepository.update(v.id, v.data);
+            this.googleTasksRepository.update(v.id, v.data);
         });
         // googleからタスクを取得
         const googleTasks = this.googleTasksRepository.getTasks();
@@ -96,6 +99,9 @@ class MainService {
         const sheetTasks = googleTasks.map((v) => MainService.convertGoogleTaskToSheetTask(v));
         // sheetへ保存
         this.taskSheetRepository.updateSheet(sheetTasks);
+    }
+    setupSheet() {
+        this.taskSheetRepository.setupSheet();
     }
 }
 class DiffJudge {
@@ -112,7 +118,7 @@ class DiffJudge {
             }
             return a.getTime() == b.getTime();
         };
-        const result = { status: 'none', id: s.id, data: { title: undefined, notes: undefined, due: undefined } };
+        const result = { status: 'none', id: s.id, data: { title: undefined, notes: undefined, due: undefined, completed: undefined } };
         if (!s.id) {
             return { status: 'new', data: s };
         }
@@ -128,6 +134,10 @@ class DiffJudge {
             result.status = 'update';
             result.data.due = s.due;
         }
+        if (!eqDate(s.completed, b.completed)) {
+            result.status = 'update';
+            result.data.completed = s.completed;
+        }
         return result;
     }
 }
@@ -135,9 +145,6 @@ class TaskSheetRepository {
     constructor(sheet, backupSheet) {
         this.sheet = sheet;
         this.backupSheet = backupSheet;
-        // this.spreadSheet = spreadSheet;
-        // this._sheetName = 'シート1';
-        // this._backupSheetName = 'タスクバックアップ'
         this._columns = [
             'short',
             'completed',
@@ -181,8 +188,8 @@ class TaskSheetRepository {
     }
 }
 class GoogleTasksRepository {
-    constructor() {
-        this.taskListId = null;
+    constructor(taskListId) {
+        this.taskListId = taskListId;
         if (!this.taskListId) {
             throw new Error('GoogleTasksRepository.taskListIdを設定してください');
         }
@@ -203,6 +210,22 @@ class GoogleTasksRepository {
             input.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
         }
         Tasks.Tasks.insert(input, this.taskListId);
+    }
+    update(id, task) {
+        var t = {};
+        if (task.title) {
+            t.title = task.title;
+        }
+        if (task.notes) {
+            t.notes = task.notes;
+        }
+        if (task.due) {
+            t.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
+        }
+        if (task.completed) {
+            t.completed = Utilities.formatDate(task.completed, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
+        }
+        Tasks.Tasks.patch(t, this.taskListId, id);
     }
     getTasks() {
         return Tasks.Tasks.list(this.taskListId, {
