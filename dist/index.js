@@ -8,7 +8,7 @@ const config = {
 // 変更点の更新
 // GoogleTasksの読み込み
 function update() {
-    new MainService(config).update();
+    createMainService_().update();
 }
 function onOpen() {
     const customMenu = SpreadsheetApp.getUi();
@@ -21,7 +21,7 @@ function setupSheet() {
     if (!config.googleTaskListId) {
         throw new Error('config.googleTaskListIdを設定してください');
     }
-    new MainService(config).setupSheet();
+    createMainService_().setupSheet();
 }
 /**
  * シートのラッパー
@@ -64,11 +64,20 @@ class Sheet {
         return this.getSheet().getDataRange().getValues();
     }
 }
+/**
+ * 依存性を注入してMainServiceを生成する
+ * @returns
+ */
+function createMainService_() {
+    // DI
+    const googleTasksRepository = new GoogleTasksRepository(config.googleTaskListId, Tasks.Tasks, Utilities);
+    const taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
+    return new MainService(googleTasksRepository, taskSheetRepository);
+}
 class MainService {
-    constructor(config) {
-        // DI
-        this.googleTasksRepository = new GoogleTasksRepository(config.googleTaskListId);
-        this.taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
+    constructor(googleTasksRepository, taskSheetRepository) {
+        this.googleTasksRepository = googleTasksRepository;
+        this.taskSheetRepository = taskSheetRepository;
     }
     static dateToText(dateOrText) {
         if (!dateOrText) {
@@ -200,11 +209,13 @@ class TaskSheetRepository {
     }
 }
 class GoogleTasksRepository {
-    constructor(taskListId) {
+    constructor(taskListId, googleTasksApi, gasUtilities) {
         this.taskListId = taskListId;
         if (!this.taskListId) {
             throw new Error('config.googleTaskListIdを設定してください');
         }
+        this.googleTasksApi = googleTasksApi;
+        this.gasUtilities = gasUtilities;
     }
     insert(task) {
         const input = {
@@ -212,9 +223,9 @@ class GoogleTasksRepository {
             notes: task.notes
         };
         if (task.due) {
-            input.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
+            input.due = this.gasUtilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
         }
-        Tasks.Tasks.insert(input, this.taskListId);
+        this.googleTasksApi.insert(input, this.taskListId);
     }
     update(id, task) {
         var t = {};
@@ -225,15 +236,15 @@ class GoogleTasksRepository {
             t.notes = task.notes;
         }
         if (task.due) {
-            t.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
+            t.due = this.gasUtilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
         }
         if (task.status) {
             t.status = task.status;
         }
-        Tasks.Tasks.patch(t, this.taskListId, id);
+        this.googleTasksApi.patch(t, this.taskListId, id);
     }
     getTasks() {
-        return Tasks.Tasks.list(this.taskListId, {
+        return this.googleTasksApi.list(this.taskListId, {
             showCompleted: true,
             showHidden: true
         }).items.map((v) => {

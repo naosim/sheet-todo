@@ -9,17 +9,18 @@ const config: Config = {
   googleTaskListId: null, // ★設定してください
 }
 
-
+type GasUtilities = {formatDate: (date: Date, locale: string, format: string) => string}
+type GoogleTasksApi = {insert: any, patch: any, list: any}
 declare var SpreadsheetApp: any;
-declare var Utilities: {formatDate: (date: Date, locale: string, format: string) => string}
-declare var Tasks: {Tasks: any};
+declare var Utilities: GasUtilities
+declare var Tasks: {Tasks: GoogleTasksApi};
 
 // いい感じに同期します
 // 新規タスクの追加
 // 変更点の更新
 // GoogleTasksの読み込み
 function update() {
-  new MainService(config).update();
+  createMainService_().update();
 }
 
 function onOpen() {
@@ -34,7 +35,7 @@ function setupSheet() {
   if(!config.googleTaskListId) {
     throw new Error('config.googleTaskListIdを設定してください');
   }
-  new MainService(config).setupSheet();
+  createMainService_().setupSheet();
 }
 
 /**
@@ -82,13 +83,24 @@ class Sheet {
   }
 }
 
+/**
+ * 依存性を注入してMainServiceを生成する
+ * @returns 
+ */
+function createMainService_() {
+  // DI
+  const googleTasksRepository = new GoogleTasksRepository(config.googleTaskListId, Tasks.Tasks, Utilities);
+  const taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
+
+  return new MainService(googleTasksRepository, taskSheetRepository);
+}
+
 class MainService {
   private googleTasksRepository: GoogleTasksRepository;
   private taskSheetRepository: TaskSheetRepository;
-  constructor(config: Config) {
-    // DI
-    this.googleTasksRepository = new GoogleTasksRepository(config.googleTaskListId);
-    this.taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
+  constructor(googleTasksRepository: GoogleTasksRepository, taskSheetRepository: TaskSheetRepository) {
+    this.googleTasksRepository = googleTasksRepository;
+    this.taskSheetRepository = taskSheetRepository;
   }
 
   static dateToText(dateOrText: string | Date): string {
@@ -275,11 +287,15 @@ type UpdateTask = {
 
 class GoogleTasksRepository {
   taskListId: string;
-  constructor(taskListId: string) {
+  googleTasksApi: GoogleTasksApi;
+  gasUtilities: GasUtilities;
+  constructor(taskListId: string, googleTasksApi: GoogleTasksApi, gasUtilities: GasUtilities) {
     this.taskListId = taskListId;
     if(!this.taskListId) {
       throw new Error('config.googleTaskListIdを設定してください');
     }
+    this.googleTasksApi = googleTasksApi;
+    this.gasUtilities = gasUtilities;
   }
   insert(task: NewTask) {
     const input: {title: string, notes: string, due?: string} = {
@@ -287,10 +303,10 @@ class GoogleTasksRepository {
       notes: task.notes
     };
     if(task.due) {
-      input.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z"
+      input.due = this.gasUtilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z"
     }
 
-    Tasks.Tasks.insert(input, this.taskListId);
+    this.googleTasksApi.insert(input, this.taskListId);
 
   }
 
@@ -303,17 +319,17 @@ class GoogleTasksRepository {
       t.notes = task.notes
     }
     if(task.due) {
-      t.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z"
+      t.due = this.gasUtilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z"
     }
     if(task.status) {
       t.status = task.status
     }
 
-    Tasks.Tasks.patch(t, this.taskListId, id)
+    this.googleTasksApi.patch(t, this.taskListId, id)
   }
   
   getTasks(): GoogleTask[] {
-    return Tasks.Tasks.list(this.taskListId, {
+    return this.googleTasksApi.list(this.taskListId, {
       showCompleted: true,
       showHidden: true
     }).items.map((v: any) => {
