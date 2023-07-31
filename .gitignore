@@ -1,0 +1,4 @@
+node_modules/
+docs/
+def.json
+package-lock.json

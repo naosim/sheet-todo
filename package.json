@@ -1,0 +1,15 @@
+{
+  "name": "sheet-todo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typedoc": "^0.24.8",
+    "typescript": "^5.1.6"
+  }
+}
