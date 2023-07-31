@@ -103,7 +103,8 @@ class MainService {
       due: googleTask.dates.due,
       completed: googleTask.dates.completed,
       updated: googleTask.dates.updated,
-      short
+      short,
+      status: googleTask.status
     }
 
     return result;
@@ -136,7 +137,7 @@ class MainService {
 }
 
 type JudgeResult = {
-  status: 'none' | 'new' | 'update', id?: string, data: {title?: string, notes?: string, due?: Date, completed?: Date}
+  status: 'none' | 'new' | 'update', id?: string, data: {title?: string, notes?: string, due?: Date, status?: string}
 }
 
 class DiffJudge {
@@ -154,7 +155,7 @@ class DiffJudge {
       return a.getTime() == b.getTime();
     };
 
-    const result: JudgeResult = {status: 'none', id: s.id, data: {title: undefined, notes: undefined, due: undefined, completed: undefined}};
+    const result: JudgeResult = {status: 'none', id: s.id, data: {title: undefined, notes: undefined, due: undefined, status: undefined}};
     if(!s.id) {
       return {status: 'new', data: s};
     }
@@ -170,9 +171,9 @@ class DiffJudge {
       result.status = 'update';
       result.data.due = s.due;
     }
-    if(!eqDate(s.completed, b.completed)) {
+    if(s.status != b.status) {
       result.status = 'update';
-      result.data.completed = s.completed;
+      result.data.status = s.status;
     }
     return result;
   }
@@ -180,12 +181,13 @@ class DiffJudge {
 
 type SheetTask = {
   'short': string,
-  'completed': Date,
+  'status': string,
   'title': string,
   'notes': string,
   'due': Date,
   'id': string,
-  'updated': Date
+  'updated': Date,
+  'completed': Date,
 }
 
 class TaskSheetRepository {
@@ -198,12 +200,13 @@ class TaskSheetRepository {
     this.backupSheet = backupSheet;
     this._columns = [
       'short',
-      'completed',
+      'status',
       'title',
       'notes',
       'due',
       'id',
       'updated',
+      'completed',
     ]
   }
 
@@ -282,7 +285,7 @@ class GoogleTasksRepository {
 
   }
 
-  update(id: string, task: {title?: string, notes?: string, due?: Date, completed?: Date}) {
+  update(id: string, task: {title?: string, notes?: string, due?: Date, status?: string}) {
     var t: any = {};
     if(task.title) {
       t.title = task.title
@@ -293,8 +296,8 @@ class GoogleTasksRepository {
     if(task.due) {
       t.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z"
     }
-    if(task.completed) {
-      t.completed = Utilities.formatDate(task.completed, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z"
+    if(task.status) {
+      t.status = task.status
     }
 
     Tasks.Tasks.patch(t, this.taskListId, id)

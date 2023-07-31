@@ -81,7 +81,8 @@ class MainService {
             due: googleTask.dates.due,
             completed: googleTask.dates.completed,
             updated: googleTask.dates.updated,
-            short
+            short,
+            status: googleTask.status
         };
         return result;
     }
@@ -121,7 +122,7 @@ class DiffJudge {
             }
             return a.getTime() == b.getTime();
         };
-        const result = { status: 'none', id: s.id, data: { title: undefined, notes: undefined, due: undefined, completed: undefined } };
+        const result = { status: 'none', id: s.id, data: { title: undefined, notes: undefined, due: undefined, status: undefined } };
         if (!s.id) {
             return { status: 'new', data: s };
         }
@@ -137,9 +138,9 @@ class DiffJudge {
             result.status = 'update';
             result.data.due = s.due;
         }
-        if (!eqDate(s.completed, b.completed)) {
+        if (s.status != b.status) {
             result.status = 'update';
-            result.data.completed = s.completed;
+            result.data.status = s.status;
         }
         return result;
     }
@@ -150,12 +151,13 @@ class TaskSheetRepository {
         this.backupSheet = backupSheet;
         this._columns = [
             'short',
-            'completed',
+            'status',
             'title',
             'notes',
             'due',
             'id',
             'updated',
+            'completed',
         ];
     }
     setupSheet() {
@@ -225,8 +227,8 @@ class GoogleTasksRepository {
         if (task.due) {
             t.due = Utilities.formatDate(task.due, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
         }
-        if (task.completed) {
-            t.completed = Utilities.formatDate(task.completed, "Asia/Tokyo", "yyyy-MM-dd") + "T00:00:00.000Z";
+        if (task.status) {
+            t.status = task.status;
         }
         Tasks.Tasks.patch(t, this.taskListId, id);
     }
