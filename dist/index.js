@@ -165,7 +165,7 @@ class TaskSheetRepository {
     constructor(sheet, backupSheet) {
         this.sheet = sheet;
         this.backupSheet = backupSheet;
-        this._columns = [
+        this.columns = [
             'short',
             'status',
             'title',
@@ -178,13 +178,13 @@ class TaskSheetRepository {
     }
     setupSheet() {
         this.sheet.clear();
-        this.sheet.setValues([this._columns]);
-        this.backupSheet.setValues([this._columns]);
+        this.sheet.setValues([this.columns]);
+        this.backupSheet.setValues([this.columns]);
     }
     updateSheet(sheetTasks) {
         const table = [
-            this._columns,
-            ...sheetTasks.map(t => this._columns.map(c => t[c]))
+            this.columns,
+            ...sheetTasks.map(t => this.columns.map(c => t[c]))
         ];
         const updateSheet = (sheet) => {
             sheet.clearContents();
@@ -196,7 +196,7 @@ class TaskSheetRepository {
     getDiffTasks() {
         const aryToTask = (ary) => {
             return ary.reduce((memo, v, i) => {
-                memo[this._columns[i]] = v;
+                memo[this.columns[i]] = v;
                 return memo;
             }, {});
         };

@@ -43,7 +43,7 @@ function setupSheet() {
  */
 class Sheet {
   private sheet: any;
-  sheetName: string;
+  private sheetName: string;
   constructor(sheetName: string) {
     this.sheetName = sheetName;
   }
@@ -103,7 +103,7 @@ class MainService {
     this.taskSheetRepository = taskSheetRepository;
   }
 
-  static dateToText(dateOrText: string | Date): string {
+  private static dateToText(dateOrText: string | Date): string {
     if(!dateOrText) {
       return dateOrText as string;
     }
@@ -114,7 +114,7 @@ class MainService {
 
   }
 
-  static convertGoogleTaskToSheetTask(googleTask: GoogleTask): SheetTask {
+  private static convertGoogleTaskToSheetTask(googleTask: GoogleTask): SheetTask {
     const short = [googleTask.title, MainService.dateToText(googleTask.dates.due), googleTask.notes].filter(v => v).map(v => v.trim()).join('\n').slice(0, 140);
     const result = {
       id: googleTask.id,
@@ -214,13 +214,13 @@ type SheetTask = {
 
 class TaskSheetRepository {
 
-  _columns: string[];
-  sheet: Sheet;
-  backupSheet: Sheet;
+  private columns: string[];
+  private sheet: Sheet;
+  private backupSheet: Sheet;
   constructor(sheet: Sheet, backupSheet: Sheet) {
     this.sheet = sheet;
     this.backupSheet = backupSheet;
-    this._columns = [
+    this.columns = [
       'short',
       'status',
       'title',
@@ -234,14 +234,14 @@ class TaskSheetRepository {
 
   setupSheet() {
     this.sheet.clear();
-    this.sheet.setValues([this._columns]);
-    this.backupSheet.setValues([this._columns]);
+    this.sheet.setValues([this.columns]);
+    this.backupSheet.setValues([this.columns]);
   }
 
   updateSheet(sheetTasks: SheetTask[]) {
     const table = [
-      this._columns,
-      ...sheetTasks.map(t => this._columns.map(c => t[c]))
+      this.columns,
+      ...sheetTasks.map(t => this.columns.map(c => t[c]))
     ];
 
     const updateSheet = (sheet: Sheet) => {
@@ -258,7 +258,7 @@ class TaskSheetRepository {
   getDiffTasks() {
     const aryToTask = (ary: any[]) => {
       return ary.reduce((memo: any, v, i) => {
-        memo[this._columns[i]] = v;
+        memo[this.columns[i]] = v;
         return memo;
       }, {}) as SheetTask
     }
@@ -286,9 +286,9 @@ type UpdateTask = {
 }
 
 class GoogleTasksRepository {
-  taskListId: string;
-  googleTasksApi: GoogleTasksApi;
-  gasUtilities: GasUtilities;
+  private taskListId: string;
+  private googleTasksApi: GoogleTasksApi;
+  private gasUtilities: GasUtilities;
   constructor(taskListId: string, googleTasksApi: GoogleTasksApi, gasUtilities: GasUtilities) {
     this.taskListId = taskListId;
     if(!this.taskListId) {
