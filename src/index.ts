@@ -37,13 +37,21 @@ function setupSheet() {
   new MainService(config).setupSheet();
 }
 
+/**
+ * シートのラッパー
+ */
 class Sheet {
   private sheet: any;
   sheetName: string;
   constructor(sheetName: string) {
     this.sheetName = sheetName;
   }
-  getSheet(): any {
+  
+  /**
+   * シートを取得する。シートがなければ作成する。1度取得したらメモリ上に保持する。
+   * @returns 
+   */
+  private getSheet(): any {
     if(!this.sheet) {
       var spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
       var a = spreadSheet.getSheetByName(this.sheetName);
@@ -137,7 +145,9 @@ class MainService {
 }
 
 type JudgeResult = {
-  status: 'none' | 'new' | 'update', id?: string, data: {title?: string, notes?: string, due?: Date, status?: string}
+  status: 'none' | 'new' | 'update', 
+  id?: string, 
+  data: UpdateTask
 }
 
 class DiffJudge {
@@ -180,14 +190,14 @@ class DiffJudge {
 }
 
 type SheetTask = {
-  'short': string,
-  'status': string,
-  'title': string,
-  'notes': string,
-  'due': Date,
-  'id': string,
-  'updated': Date,
-  'completed': Date,
+  short: string,
+  status: string,
+  title: string,
+  notes: string,
+  due: Date,
+  id: string,
+  updated: Date,
+  completed: Date,
 }
 
 class TaskSheetRepository {
@@ -256,6 +266,13 @@ type NewTask = {
   notes?: string,
   due?: Date,
 }
+type UpdateTask = {
+  title?: string, 
+  notes?: string, 
+  due?: Date, 
+  status?: string
+}
+
 class GoogleTasksRepository {
   taskListId: string;
   constructor(taskListId: string) {
@@ -265,14 +282,6 @@ class GoogleTasksRepository {
     }
   }
   insert(task: NewTask) {
-    /*
-    {
-      title: string,
-      notes: string,
-      due: Date,
-    }
-    */
-
     const input: {title: string, notes: string, due?: string} = {
       title: task.title,
       notes: task.notes
@@ -285,7 +294,7 @@ class GoogleTasksRepository {
 
   }
 
-  update(id: string, task: {title?: string, notes?: string, due?: Date, status?: string}) {
+  update(id: string, task: UpdateTask) {
     var t: any = {};
     if(task.title) {
       t.title = task.title
@@ -322,25 +331,25 @@ class GoogleTasksRepository {
 }
 
 type GoogleTask = {
-  "kind": string,
-  "id": string,
-  "etag": string,
-  "title": string,
-  "updated": string,
-  "selfLink": string,
-  "parent": string,
-  "position": string,
-  "notes": string,
-  "status": string,
-  "due": string,
-  "completed": string,
-  "deleted": boolean,
-  "hidden": boolean,
-  "links": [
+  kind: string,
+  id: string,
+  etag: string,
+  title: string,
+  updated: string,
+  selfLink: string,
+  parent: string,
+  position: string,
+  notes: string,
+  status: string,
+  due: string,
+  completed: string,
+  deleted: boolean,
+  hidden: boolean,
+  links: [
     {
-      "type": string,
-      "description": string,
-      "link": string
+      type: string,
+      description: string,
+      link: string
     }
   ],
   dates: {

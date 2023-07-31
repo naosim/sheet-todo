@@ -23,10 +23,17 @@ function setupSheet() {
     }
     new MainService(config).setupSheet();
 }
+/**
+ * シートのラッパー
+ */
 class Sheet {
     constructor(sheetName) {
         this.sheetName = sheetName;
     }
+    /**
+     * シートを取得する。シートがなければ作成する。1度取得したらメモリ上に保持する。
+     * @returns
+     */
     getSheet() {
         if (!this.sheet) {
             var spreadSheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -200,13 +207,6 @@ class GoogleTasksRepository {
         }
     }
     insert(task) {
-        /*
-        {
-          title: string,
-          notes: string,
-          due: Date,
-        }
-        */
         const input = {
             title: task.title,
             notes: task.notes
