@@ -31,6 +31,9 @@ function onOpen() {
 
 // スプレッドシートをセットアップします。
 function setupSheet() {
+  if(!config.googleTaskListId) {
+    throw new Error('config.googleTaskListIdを設定してください');
+  }
   new MainService(config).setupSheet();
 }
 
@@ -255,7 +258,7 @@ class GoogleTasksRepository {
   constructor(taskListId: string) {
     this.taskListId = taskListId;
     if(!this.taskListId) {
-      throw new Error('GoogleTasksRepository.taskListIdを設定してください');
+      throw new Error('config.googleTaskListIdを設定してください');
     }
   }
   insert(task: NewTask) {
