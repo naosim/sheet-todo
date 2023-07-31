@@ -79,7 +79,7 @@ class MainService {
   private taskSheetRepository: TaskSheetRepository;
   constructor(config: Config) {
     // DI
-    this.googleTasksRepository = new GoogleTasksRepository(config.sheetName);
+    this.googleTasksRepository = new GoogleTasksRepository(config.googleTaskListId);
     this.taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
   }
 

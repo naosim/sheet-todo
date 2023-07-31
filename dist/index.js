@@ -60,7 +60,7 @@ class Sheet {
 class MainService {
     constructor(config) {
         // DI
-        this.googleTasksRepository = new GoogleTasksRepository(config.sheetName);
+        this.googleTasksRepository = new GoogleTasksRepository(config.googleTaskListId);
         this.taskSheetRepository = new TaskSheetRepository(new Sheet(config.sheetName), new Sheet(config.backupSheetName));
     }
     static dateToText(dateOrText) {
